@@ -1,111 +1,35 @@
-package spring.web.webApp.multifileitemreader;
+package spring.web.webApp.pojo;
 
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.ResourceAware;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.MultiResourceItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
-import org.springframework.batch.item.file.transform.FieldSet;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-import org.springframework.validation.BindException;
-
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.util.Date;
+import java.util.Objects;
 
-//@Configuration
-public class MultiFileItemReaderr {
-
-    @Autowired
-    private StepBuilderFactory stepBuilderFactory;
-
-    @Autowired
-    private JobBuilderFactory jobBuilderFactory;
-    @Value("classpath*:/data/customer*.csv")
-    private Resource[] inputFiles;
-
-    @Bean
-    public MultiResourceItemReader<Customer> multiResourceItemReader(){
-        MultiResourceItemReader<Customer> reader = new MultiResourceItemReader<>();
-        reader.setDelegate(customerItemReader());
-        reader.setResources(inputFiles);
-        return reader;
-    }
-
-    @Bean
-    public FlatFileItemReader<Customer> customerItemReader(){
-        FlatFileItemReader<Customer> reader = new FlatFileItemReader<>();
-        DefaultLineMapper<Customer> mapper = new DefaultLineMapper<>();
-        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer();
-        tokenizer.setNames(new String[]{"id", "firstName", "lastName", "birthdate"});
-
-        mapper.setLineTokenizer(tokenizer);
-        mapper.setFieldSetMapper(new CustomerFieldSetMapper());
-        mapper.afterPropertiesSet();
-        reader.setLineMapper(mapper);
-        return reader;
-    }
-
-    @Bean
-    public ItemWriter<Customer> customerItemWriter(){
-        return items -> {
-          for (Customer cust:items){
-              System.out.println("Customer: "+cust.toString());
-          }
-        };
-    }
-
-    @Bean
-    public Step step1(){
-        return stepBuilderFactory
-                .get("step1")
-                .<Customer, Customer>chunk(10)
-                .reader(multiResourceItemReader())
-                .writer(customerItemWriter())
-                .build();
-    }
-
-    @Bean
-    public Job job(){
-        return jobBuilderFactory
-                .get("job")
-                .start(step1())
-                .build();
-    }
-}
-
-class CustomerFieldSetMapper implements FieldSetMapper<Customer>{
-
-    @Override
-    public Customer mapFieldSet(FieldSet fieldSet) throws BindException {
-        Customer customer = new Customer();
-        customer.setId(fieldSet.readLong("id"));
-        customer.setFirstName(fieldSet.readString("firstName"));
-        customer.setLastName(fieldSet.readString("lastName"));
-        customer.setBirthdate(fieldSet.readDate("birthdate", "yyyy-MM-dd HH:mm:ss"));
-        return customer;
-    }
-}
-
-class Customer implements ResourceAware{
+@Entity
+@Table(name = "customer2")
+public class Customer {
+    @Id
+    @Column(name = "id")
     private Long id;
-    private String firstName;
-    private String lastName;
 
-    @Override
-    public void setResource(Resource resource) {
-        this.resource = resource;
+    @Column(name = "firstname")
+    private String firstname;
+    @Column(name = "lastname")
+    private String lastname;
+    @Column(name = "birthdate")
+    private Date birthdate;
+
+    public Customer() {
     }
 
-    private Resource resource;
+    public Customer(Long id, String firstname, String lastname, Date birthdate) {
+        this.id = id;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.birthdate = birthdate;
+    }
 
     public Long getId() {
         return id;
@@ -115,20 +39,20 @@ class Customer implements ResourceAware{
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getFirstname() {
+        return firstname;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
     }
 
-    public String getLastName() {
-        return lastName;
+    public String getLastname() {
+        return lastname;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
     }
 
     public Date getBirthdate() {
@@ -139,25 +63,25 @@ class Customer implements ResourceAware{
         this.birthdate = birthdate;
     }
 
-    private Date birthdate;
-
-    public Customer(){}
-
-    public Customer(Long id, String firstName, String lastName, Date birthdate) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.birthdate = birthdate;
-    }
-
     @Override
     public String toString() {
         return "Customer{" +
                 "id=" + id +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", resource=" + resource +
+                ", firstname='" + firstname + '\'' +
+                ", lastname='" + lastname + '\'' +
                 ", birthdate=" + birthdate +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Customer customer)) return false;
+        return Objects.equals(getId(), customer.getId()) && Objects.equals(getFirstname(), customer.getFirstname()) && Objects.equals(getLastname(), customer.getLastname()) && Objects.equals(getBirthdate(), customer.getBirthdate());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId(), getFirstname(), getLastname(), getBirthdate());
     }
 }

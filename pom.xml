@@ -45,6 +45,14 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
+
+		<!-- this is xml flat file reader -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-oxm</artifactId>
+			<version>3.0.6.RELEASE</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

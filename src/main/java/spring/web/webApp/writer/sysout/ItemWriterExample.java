@@ -1,4 +1,4 @@
-package spring.web.webApp.writer;
+package spring.web.webApp.writer.sysout;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.ArrayList;
 import java.util.List;
 
-@Configuration
+//@Configuration
 public class ItemWriterExample {
 
     @Autowired

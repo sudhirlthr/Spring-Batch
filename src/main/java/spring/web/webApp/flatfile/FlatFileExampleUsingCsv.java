@@ -12,13 +12,12 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.validation.BindException;
 import spring.web.webApp.pojo.Employee;
 
-@Configuration
-public class FlatFileExample {
+//@Configuration
+public class FlatFileExampleUsingCsv {
 
     @Autowired
     public StepBuilderFactory  stepBuilderFactory;
@@ -77,9 +76,9 @@ class CustomFieldSetMapper implements FieldSetMapper<Employee> {
     @Override
     public Employee mapFieldSet(FieldSet fieldSet) throws BindException {
         Employee employee = new Employee();
-        employee.seteId(fieldSet.readLong("eid"));
-        employee.setfName(fieldSet.readString("fname"));
-        employee.setlName(fieldSet.readString("lname"));
+        employee.setEid(fieldSet.readLong("eid"));
+        employee.setFname(fieldSet.readString("fname"));
+        employee.setLname(fieldSet.readString("lname"));
         return employee;
     }
 }

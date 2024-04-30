@@ -1,2 +1,184 @@
-package spring.web.webApp.writer.flatfile;public class FlatFileWriter {
+package spring.web.webApp.writer.flatfile;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcPagingItemReader;
+import org.springframework.batch.item.database.Order;
+import org.springframework.batch.item.database.support.H2PagingQueryProvider;
+import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.batch.item.file.transform.LineAggregator;
+import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.validation.BindException;
+import spring.web.webApp.pojo.Customer;
+
+import javax.sql.DataSource;
+import java.io.File;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+
+//@Configuration
+public class FlatFileWriter {
+    @Autowired
+    public StepBuilderFactory stepBuilderFactory;
+
+    @Autowired
+    public JobBuilderFactory jobBuilderFactory;
+
+    @Autowired
+    public DataSource dataSource;
+
+    private String sql = "insert into customer2 (id, firstname, lastname, birthdate) values (:id, :firstname, :lastname, :birthdate)";
+
+
+    @Bean
+    public JdbcPagingItemReader<Customer> pagingItemReader(){
+        Map<String, Order> sortKeys = new HashMap<>();
+        sortKeys.put("id", Order.DESCENDING);
+
+        H2PagingQueryProvider queryProvider = new H2PagingQueryProvider();
+        queryProvider.setSelectClause("id, firstname, lastname, birthdate");
+        queryProvider.setFromClause("from customer2");
+        queryProvider.setSortKeys(sortKeys);
+
+        JdbcPagingItemReader<Customer> reader = new JdbcPagingItemReader<>();
+        reader.setDataSource(this.dataSource);
+        reader.setFetchSize(10);
+        reader.setRowMapper(new CustomerRowMapper());
+        reader.setQueryProvider(queryProvider);
+        return reader;
+    }
+
+    @Bean
+    public FlatFileItemWriter<Customer> customerItemWriter() throws Exception {
+        FlatFileItemWriter<Customer> writer = new FlatFileItemWriter<>();
+        // for simple output based on Customer class toString()
+        // writer.setLineAggregator(new PassThroughLineAggregator<>());
+        //for JsonBased, not toString() of Customer class
+        writer.setLineAggregator(new CustomLineAggregator());
+        String absolutePath = File.createTempFile("customerOutput", ".json").getAbsolutePath();
+        System.out.println("File Path directory: "+absolutePath);
+        writer.setResource(new FileSystemResource(absolutePath));
+        writer.afterPropertiesSet();
+        return writer;
+    }
+
+
+
+    @Bean
+    public FlatFileItemReader<Customer> customerItemReaderDB(){
+        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer();
+        tokenizer.setNames(new String[]{"id", "firstname", "lastname", "birthdate"});
+
+        DefaultLineMapper<Customer> lineMapper = new DefaultLineMapper<>();
+        lineMapper.setLineTokenizer(tokenizer);
+        lineMapper.setFieldSetMapper(new CustomFieldSetMapper2());
+        lineMapper.afterPropertiesSet();
+
+        FlatFileItemReader<Customer> reader = new FlatFileItemReader<>();
+        reader.setLinesToSkip(1);
+        reader.setResource(new ClassPathResource("/customer.csv"));
+        reader.setLineMapper(lineMapper);
+        return reader;
+    }
+
+    @Bean
+    public JdbcBatchItemWriter<Customer> customerItemWriterDB(){
+        JdbcBatchItemWriter<Customer> writer = new JdbcBatchItemWriter<>();
+        writer.setDataSource(this.dataSource);
+        writer.setSql(sql);
+        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider());
+        writer.afterPropertiesSet();
+        return writer;
+    }
+
+    @Bean
+    public Step step1(){
+        return stepBuilderFactory
+                .get("step1")
+                .<Customer, Customer>chunk(10)
+                .reader(customerItemReaderDB())
+                .writer(customerItemWriterDB())
+                .build();
+    }
+
+
+    @Bean
+    public Step step2() throws Exception {
+        return stepBuilderFactory
+                .get("step1")
+                .<Customer, Customer>chunk(10)
+                .reader(pagingItemReader())
+                .writer(customerItemWriter())
+                .build();
+    }
+
+    @Bean
+    public Job job() throws Exception {
+        return jobBuilderFactory
+                .get("job")
+                .start(step1())
+                .next(step2())
+                .build();
+    }
+}
+
+class CustomerRowMapper implements RowMapper<Customer> {
+
+    @Override
+    public Customer mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Customer customer = new Customer();
+        customer.setId(rs.getLong("id"));
+        customer.setFirstname(rs.getString("firstname"));
+        customer.setLastname(rs.getString("lastname"));
+        customer.setBirthdate(rs.getDate("birthdate"));
+
+        return customer;
+    }
+}
+
+//sudhir
+class CustomFieldSetMapper2 implements FieldSetMapper<Customer> {
+
+    @Override
+    public Customer mapFieldSet(FieldSet fieldSet) throws BindException {
+        Customer customer = new Customer();
+        customer.setId(fieldSet.readLong("id"));
+        customer.setFirstname(fieldSet.readString("firstname"));
+        customer.setLastname(fieldSet.readString("lastname"));
+        customer.setBirthdate(fieldSet.readDate("birthdate", "yyyy-MM-dd HH:mm:ss"));
+        return customer;
+    }
+}
+
+class CustomLineAggregator implements LineAggregator<Customer> {
+
+    private ObjectMapper objectMapper = new ObjectMapper();
+    @Override
+    public String aggregate(Customer customer) {
+        try{
+            return objectMapper.writeValueAsString(customer);
+        }catch (JsonProcessingException exception){
+            System.err.println("Error in processing json file: "+exception.getMessage());
+            throw new RuntimeException("Unable to serialize Customer data", exception);
+        }
+    }
 }

@@ -15,7 +15,7 @@ import spring.web.webApp.mail.EmailUtil;
 import java.util.Arrays;
 import java.util.List;
 
-@Configuration
+//@Configuration
 public class ListenerJobConfiguration {
 
     @Autowired

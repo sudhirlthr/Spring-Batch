@@ -6,48 +6,57 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table
+@Table(name = "employee")
 public class Employee {
     @Id
-    @Column
-    private Long eId;
+    @Column(name = "eid")
+    private Long eid;
 
-    @Column
-    private String fName;
+    @Override
+    public String toString() {
+        return "Employee{" +
+                "eId=" + eid +
+                ", fName='" + fname + '\'' +
+                ", lName='" + lname + '\'' +
+                '}';
+    }
 
-    @Column
-    private String lName;
+    @Column(name = "fname")
+    private String fname;
+
+    @Column(name = "lname")
+    private String lname;
 
     public Employee(Long eId, String fName, String lName) {
-        this.eId = eId;
-        this.fName = fName;
-        this.lName = lName;
+        this.eid = eId;
+        this.fname = fName;
+        this.lname = lName;
     }
 
     public Employee() {
     }
 
-    public Long geteId() {
-        return eId;
+    public Long getEid() {
+        return eid;
     }
 
-    public void seteId(Long eId) {
-        this.eId = eId;
+    public void setEid(Long eid) {
+        this.eid = eid;
     }
 
-    public String getfName() {
-        return fName;
+    public String getFname() {
+        return fname;
     }
 
-    public void setfName(String fName) {
-        this.fName = fName;
+    public void setFname(String fname) {
+        this.fname = fname;
     }
 
-    public String getlName() {
-        return lName;
+    public String getLname() {
+        return lname;
     }
 
-    public void setlName(String lName) {
-        this.lName = lName;
+    public void setLname(String lname) {
+        this.lname = lname;
     }
 }
